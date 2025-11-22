@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>학습용 단어장 / دفتر كلمات للتعلّم</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+      font-size: 48px;
+    }
+
+    h1 {
+      font-size: 72px;
+      margin: 0 0 20px 0;
+    }
+
+    h1 span.sub-ar {
+      display: block;
+      font-size: 40px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    /* 🔹 제목 + 컨트롤 전체를 고정하는 래퍼 + 테두리 */
+    .header-sticky {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 12px 16px 18px 16px;
+      box-sizing: border-box;
+      background: #fdfdfd;
+      border: 4px solid #4a90e2;   /* 헤더 테두리 색 */
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* 헤더 안 내용 전체 (간소화 시 여기만 숨김) */
+    #header-content {
+      width: 100%;
+    }
+
+    /* 간소화 토글 버튼 (작은 아이콘) */
+    .compact-toggle-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 32px;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 2px solid #999;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      z-index: 20;
+    }
+
+    .compact-toggle-btn:hover {
+      background: #eee;
+    }
+
+    /* 간소화 상태일 때: 본문 헤더 숨기고 아이콘만 보이게 */
+    .header-sticky.compact #header-content {
+      display: none;
+    }
+
+    .controls {
+      padding: 15px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .row-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+    }
+
+    button {
+      font-size: 40px;
+      padding: 20px 30px;
+      border-radius: 18px;
+      border: 2px solid #999;
+      background: white;
+      cursor: pointer;
+      line-height: 1.3;
+    }
+
+    button:hover {
+      background: #eee;
+    }
+
+    .btn-ar {
+      display: block;
+      font-size: 30px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .help-btn {
+      border-radius: 999px;
+    }
+
+    select {
+      font-size: 40px;
+      padding: 15px;
+      border-radius: 15px;
+    }
+
+    /* 번호 이동 입력창 */
+    #jump-id-input {
+      font-size: 40px;
+      padding: 12px 18px;
+      border-radius: 15px;
+      border: 2px solid #999;
+      width: 220px;
+      box-sizing: border-box;
+    }
+
+    /* 🔹 사용방법 팝업 오버레이 */
+    #help-panel {
+      display: none;                  /* 기본은 숨김 */
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45); /* 반투명 배경 */
+      z-index: 1000;                  /* 화면 최상단 */
+      align-items: center;
+      justify-content: center;
+    }
+
+    .help-box {
+      background: #fffdf5;
+      border: 3px solid #efdaa0;
+      border-radius: 20px;
+      padding: 22px 24px 24px 24px;
+      max-width: 900px;
+      width: 90%;
+      max-height: 80vh;
+      box-sizing: border-box;
+      font-size: 40px;
+      overflow-y: auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    .help-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+
+    .help-box-title {
+      font-size: 42px;
+    }
+
+    .help-close-btn {
+      font-size: 40px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid #999;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .help-close-btn:hover {
+      background: #eee;
+    }
+
+    .help-box ul {
+      margin-left: 25px;
+      padding-left: 5px;
+    }
+
+    .help-ar {
+      display: block;
+      font-size: 32px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* 🔹 모바일(가로 600px 이하)에서 헤더 글자 크기 줄이기 */
+    @media (max-width: 600px) {
+      body {
+        font-size: 32px;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
+
+      h1 span.sub-ar {
+        font-size: 24px;
+      }
+
+      .header-sticky {
+        padding: 8px 10px 12px 10px;
+        border-width: 3px;
+      }
+
+      .header-sticky button {
+        font-size: 26px;
+        padding: 10px 16px;
+        border-radius: 12px;
+      }
+
+      .header-sticky .btn-ar {
+        font-size: 20px;
+      }
+
+      .header-sticky select {
+        font-size: 26px;
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+
+      .header-sticky #jump-id-input {
+        font-size: 26px;
+        padding: 8px 10px;
+        width: 160px;
+      }
+
+      .compact-toggle-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 24px;
+        top: 6px;
+        right: 6px;
+      }
+    }
+
+    /* 🔹 단어카드: 항상 2열 */
+    #cards-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      position: relative;
+      transition: background 0.25s;
+    }
+
+    .card-header {
+      font-size: 34px;
+      margin-bottom: 15px;
+      color: #666;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .question {
+      font-size: 60px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .meaning-ko {
+      font-size: 54px;
+      cursor: pointer;
+    }
+
+    .meaning-arabic {
+      font-size: 50px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      opacity: 0;
+    }
+
+    /* 상태 표시 점 */
+    .status-dot {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      border: 3px solid #999;
+      background: white;
+      cursor: pointer;
+    }
+
+    /* 읽기 버튼 */
+    .speak-btn {
+      font-size: 38px;
+      padding: 12px 20px;
+      border-radius: 15px;
+      background: #eef1ff;
+      border: 2px solid #778;
+      margin-left: 20px;
+    }
+
+    @media (max-width: 900px) {
+      #cards-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- 🔹 sticky 헤더 + 간소화 아이콘 -->
+<div class="header-sticky" id="header-sticky">
+  <button id="compact-toggle" class="compact-toggle-btn" title="열기/닫기">
+    −
+  </button>
+
+  <div id="header-content">
+    <h1>
+      학습용 단어장
+      <span class="sub-ar">دفتر كلمات للتعلّم</span>
+    </h1>
+
+    <div class="controls">
+      <div class="row-controls">
+        <button id="toggle-questions">
+          영어
+          <span class="btn-ar">الإنجليزية</span>
+        </button>
+        <button id="toggle-korean">
+          한글
+          <span class="btn-ar">الكورية</span>
+        </button>
+        <button id="toggle-arabic">
+          아랍어
+          <span class="btn-ar">العربية</span>
+        </button>
+      </div>
+
+      <div class="row-controls">
+        <button class="help-btn" id="toggle-help">
+          사용방법
+          <span class="btn-ar">طريقة الاستخدام</span>
+        </button>
+      </div>
+
+      <div class="row-controls">
+        <span>
+          속도
+          <span class="btn-ar">سرعة النطق</span>
+          :
+        </span>
+        <select id="tts-speed">
+          <option value="0.5">0.5</option>
+          <option value="0.8">0.8</option>
+          <option value="1.0" selected>1.0</option>
+          <option value="1.2">1.2</option>
+        </select>
+      </div>
+
+      <div class="row-controls">
+        <span>
+          번호 이동
+          <span class="btn-ar">الانتقال إلى رقم</span>
+          :
+        </span>
+        <input type="number" id="jump-id-input" placeholder="예: 1800" min="1">
+        <button id="jump-btn">
+          이동
+          <span class="btn-ar">انتقال</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 🔹 사용방법 팝업(모달) -->
+<div id="help-panel">
+  <div class="help-box">
+    <div class="help-box-header">
+      <span class="help-box-title">사용방법 / طريقة الاستخدام</span>
+      <button id="help-close" class="help-close-btn">×</button>
+    </div>
+    <ul>
+      <li>
+        영어, 한글, 아랍어 줄을 누르면 해당 줄만 숨기기/보이기 됩니다.
+        <span class="help-ar">عند الضغط على سطر الإنجليزية أو الكورية أو العربية، يمكنك إخفاء أو إظهار هذا السطر فقط.</span>
+      </li>
+      <li>
+        위쪽 버튼을 누르면, 카드 안에서 따로 숨겼던 것도 포함해서 전체가 한 번에 통일됩니다.
+        <span class="help-ar">عند استخدام الأزرار في الأعلى، يتم توحيد حالة الإخفاء/الإظهار لجميع الكلمات في وقت واحد، حتى لو أخفيتها بشكل فردي من قبل.</span>
+      </li>
+      <li>
+        각 줄 오른쪽의 읽기 버튼을 누르면 해당 언어(영어/한글/아랍어)로 TTS가 재생됩니다.
+        <span class="help-ar">بالضغط على زر "읽기" بجانب كل سطر، يتم نطق الكلمة أو المعنى بتلك اللغة (إنجليزية/كورية/عربية).</span>
+      </li>
+      <li>
+        카드 오른쪽 위 동그라미는 학습 상태 표시용입니다. (1번: 회색 / 2번: 노랑 / 3번: 초기화)
+        <span class="help-ar">الدائرة في الزاوية اليمنى العليا تُستخدم لتحديد حالة الحفظ: (مرة واحدة = رمادي، مرتين = أصفر، ثلاث مرات = العودة للحالة الأصلية).</span>
+      </li>
+      <p style="margin-top: 20px; font-size: 20px; text-align: right; color: #100;">
+        이것은 최문영(CHOI MOON YOUNG) 제작자에 의해 만들어졌습니다.
+      </p>
+    </ul>
+  </div>
+</div>
+
+<div id="cards-container"></div>
+
+<script>
+/* ------------------------------
+   단어 예시 데이터
+------------------------------ */
+const words = [
+{id:1, word:"person", ko:"사람", arabic:"شخص"},
+{id:2, word:"man", ko:"남자", arabic:"رجل"},
+{id:3, word:"woman", ko:"여자", arabic:"امرأة"},
+{id:4, word:"child", ko:"아이", arabic:"طفل"},
+{id:5, word:"family", ko:"가족", arabic:"عائلة"},
+{id:6, word:"friend", ko:"친구", arabic:"صديق"},
+{id:7, word:"people", ko:"사람들", arabic:"ناس"},
+{id:8, word:"mother", ko:"어머니", arabic:"أم"},
+{id:9, word:"father", ko:"아버지", arabic:"أب"},
+{id:10, word:"brother", ko:"형제", arabic:"أخ"},
+
+{id:11, word:"sister", ko:"자매", arabic:"أخت"},
+{id:12, word:"baby", ko:"아기", arabic:"رضيع"},
+{id:13, word:"home", ko:"집", arabic:"منزل"},
+{id:14, word:"house", ko:"주택", arabic:"بيت"},
+{id:15, word:"room", ko:"방", arabic:"غرفة"},
+{id:16, word:"door", ko:"문", arabic:"باب"},
+{id:17, word:"window", ko:"창문", arabic:"نافذة"},
+{id:18, word:"table", ko:"테이블", arabic:"طاولة"},
+{id:19, word:"chair", ko:"의자", arabic:"كرسي"},
+{id:20, word:"bed", ko:"침대", arabic:"سرير"},
+
+{id:21, word:"floor", ko:"바닥", arabic:"أرضية"},
+{id:22, word:"street", ko:"거리", arabic:"شارع"},
+{id:23, word:"road", ko:"도로", arabic:"طريق"},
+{id:24, word:"city", ko:"도시", arabic:"مدينة"},
+{id:25, word:"country", ko:"나라", arabic:"دولة"},
+{id:26, word:"school", ko:"학교", arabic:"مدرسة"},
+{id:27, word:"shop", ko:"가게", arabic:"متجر"},
+{id:28, word:"market", ko:"시장", arabic:"سوق"},
+{id:29, word:"restaurant", ko:"식당", arabic:"مطعم"},
+{id:30, word:"office", ko:"사무실", arabic:"مكتب"},
+
+{id:31, word:"car", ko:"차", arabic:"سيارة"},
+{id:32, word:"bus", ko:"버스", arabic:"حافلة"},
+{id:33, word:"train", ko:"기차", arabic:"قطار"},
+{id:34, word:"taxi", ko:"택시", arabic:"تاكسي"},
+{id:35, word:"plane", ko:"비행기", arabic:"طائرة"},
+{id:36, word:"airport", ko:"공항", arabic:"مطار"},
+{id:37, word:"station", ko:"역", arabic:"محطة"},
+{id:38, word:"ticket", ko:"표", arabic:"تذكرة"},
+{id:39, word:"bag", ko:"가방", arabic:"حقيبة"},
+{id:40, word:"money", ko:"돈", arabic:"مال"},
+
+{id:41, word:"food", ko:"음식", arabic:"طعام"},
+{id:42, word:"water", ko:"물", arabic:"ماء"},
+{id:43, word:"rice", ko:"밥", arabic:"أرز"},
+{id:44, word:"bread", ko:"빵", arabic:"خبز"},
+{id:45, word:"meat", ko:"고기", arabic:"لحم"},
+{id:46, word:"fish", ko:"생선", arabic:"سمك"},
+{id:47, word:"vegetable", ko:"야채", arabic:"خضار"},
+{id:48, word:"fruit", ko:"과일", arabic:"فاكهة"},
+{id:49, word:"coffee", ko:"커피", arabic:"قهوة"},
+{id:50, word:"tea", ko:"차", arabic:"شاي"},
+
+{id:51, word:"milk", ko:"우유", arabic:"حليب"},
+{id:52, word:"sugar", ko:"설탕", arabic:"سكر"},
+{id:53, word:"salt", ko:"소금", arabic:"ملح"},
+{id:54, word:"egg", ko:"달걀", arabic:"بيضة"},
+{id:55, word:"banana", ko:"바나나", arabic:"موز"},
+{id:56, word:"apple", ko:"사과", arabic:"تفاحة"},
+{id:57, word:"orange", ko:"오렌지", arabic:"برتقال"},
+{id:58, word:"chicken", ko:"닭고기", arabic:"دجاج"},
+{id:59, word:"meal", ko:"식사", arabic:"وجبة"},
+{id:60, word:"breakfast", ko:"아침식사", arabic:"فطور"},
+
+{id:61, word:"lunch", ko:"점심", arabic:"غداء"},
+{id:62, word:"dinner", ko:"저녁", arabic:"عشاء"},
+{id:63, word:"time", ko:"시간", arabic:"وقت"},
+{id:64, word:"day", ko:"날", arabic:"يوم"},
+{id:65, word:"week", ko:"주", arabic:"أسبوع"},
+{id:66, word:"month", ko:"달", arabic:"شهر"},
+{id:67, word:"year", ko:"년", arabic:"سنة"},
+{id:68, word:"morning", ko:"아침", arabic:"صباح"},
+{id:69, word:"afternoon", ko:"오후", arabic:"بعد الظهر"},
+{id:70, word:"evening", ko:"저녁", arabic:"مساء"},
+
+{id:71, word:"night", ko:"밤", arabic:"ليل"},
+{id:72, word:"today", ko:"오늘", arabic:"اليوم"},
+{id:73, word:"tomorrow", ko:"내일", arabic:"غداً"},
+{id:74, word:"yesterday", ko:"어제", arabic:"أمس"},
+{id:75, word:"job", ko:"직업", arabic:"وظيفة"},
+{id:76, word:"work", ko:"일", arabic:"عمل"},
+{id:77, word:"company", ko:"회사", arabic:"شركة"},
+{id:78, word:"office", ko:"사무실", arabic:"مكتب"},
+{id:79, word:"computer", ko:"컴퓨터", arabic:"حاسوب"},
+{id:80, word:"phone", ko:"전화기", arabic:"هاتف"},
+
+{id:81, word:"call", ko:"전화하다", arabic:"يتصل"},
+{id:82, word:"talk", ko:"말하다", arabic:"يتحدث"},
+{id:83, word:"say", ko:"말하다", arabic:"يقول"},
+{id:84, word:"speak", ko:"말하다", arabic:"يتكلم"},
+{id:85, word:"write", ko:"쓰다", arabic:"يكتب"},
+{id:86, word:"read", ko:"읽다", arabic:"يقرأ"},
+{id:87, word:"listen", ko:"듣다", arabic:"يستمع"},
+{id:88, word:"hear", ko:"들리다", arabic:"يسمع"},
+
+{id:3000, word:"wholeheartedly", ko:"진심으로, 전심으로", arabic:"بكل القلب / بإخلاص"}
+
+// 세트10 (id 2701–3000): 고급 동사·형용사·빈도 낮은 전문 단어 300
+];
+
+const container = document.getElementById("cards-container");
+
+/* ---- 전체 숨김 상태 플래그 (헤더 버튼용) ---- */
+let isQuestionsHidden = false;
+let isKoreanHidden   = false;
+let isArabicHidden   = false;
+
+/* ---- localStorage 키 ---- */
+const STORAGE_KEY = "vocab_app_state_v1";
+
+/* -------------------------
+   상태 저장/로드 함수
+-------------------------*/
+function loadAppState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("상태 로드 실패:", e);
+    return null;
+  }
+}
+
+function saveAppState() {
+  try {
+    const data = {
+      global: {
+        isQuestionsHidden,
+        isKoreanHidden,
+        isArabicHidden
+      },
+      cards: {},
+      scrollY: window.scrollY || 0
+    };
+
+    document.querySelectorAll(".card").forEach(card => {
+      const id = card.id.replace("card-", "");
+      const q  = card.querySelector(".question");
+      const ko = card.querySelector(".meaning-ko");
+      const ar = card.querySelector(".meaning-arabic");
+      const state = Number(card.dataset.state) || 0;
+
+      data.cards[id] = {
+        state,
+        showQuestion: !q.classList.contains("hidden"),
+        showKo: !ko.classList.contains("hidden"),
+        showAr: !ar.classList.contains("hidden")
+      };
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("상태 저장 실패:", e);
+  }
+}
+
+/* 스크롤 위치만 따로 가볍게 저장 */
+let scrollSaveTimer = null;
+function saveScrollPositionOnly() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    let data = raw ? JSON.parse(raw) : { global:{}, cards:{}, scrollY:0 };
+    data.scrollY = window.scrollY || 0;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("스크롤 위치 저장 실패:", e);
+  }
+}
+
+function applySavedState() {
+  const saved = loadAppState();
+  if (!saved) return;
+
+  // 전역 플래그 복원
+  if (saved.global) {
+    isQuestionsHidden = !!saved.global.isQuestionsHidden;
+    isKoreanHidden    = !!saved.global.isKoreanHidden;
+    isArabicHidden    = !!saved.global.isArabicHidden;
+  }
+
+  const cardsState = saved.cards || {};
+
+  document.querySelectorAll(".card").forEach(card => {
+    const id = card.id.replace("card-", "");
+    const stateInfo = cardsState[id];
+    const q   = card.querySelector(".question");
+    const ko  = card.querySelector(".meaning-ko");
+    const ar  = card.querySelector(".meaning-arabic");
+    const dot = card.querySelector(".status-dot");
+
+    // 상태 점(배경색) 복원
+    let s = 0;
+    if (stateInfo && typeof stateInfo.state === "number") {
+      s = stateInfo.state;
+    }
+    card.dataset.state = s;
+
+    if (s === 0) {
+      card.style.background = "white";
+      dot.style.background = "white";
+    } else if (s === 1) {
+      card.style.background = "#eee";
+      dot.style.background = "#ccc";
+    } else if (s === 2) {
+      card.style.background = "#fff6a0";
+      dot.style.background = "#ffe36e";
+    }
+
+    // 각 줄 숨김 상태 복원
+    if (stateInfo) {
+      if (stateInfo.showQuestion === false) q.classList.add("hidden");
+      else q.classList.remove("hidden");
+
+      if (stateInfo.showKo === false) ko.classList.add("hidden");
+      else ko.classList.remove("hidden");
+
+      if (stateInfo.showAr === false) ar.classList.add("hidden");
+      else ar.classList.remove("hidden");
+    }
+  });
+
+  // 전역 숨김 플래그에 맞춰 한 번 더 정리
+  if (isQuestionsHidden) {
+    document.querySelectorAll(".question").forEach(el => el.classList.add("hidden"));
+  }
+  if (isKoreanHidden) {
+    document.querySelectorAll(".meaning-ko").forEach(el => el.classList.add("hidden"));
+  }
+  if (isArabicHidden) {
+    document.querySelectorAll(".meaning-arabic").forEach(el => el.classList.add("hidden"));
+  }
+
+  // 스크롤 위치 복원
+  if (typeof saved.scrollY === "number" && saved.scrollY > 0) {
+    setTimeout(() => {
+      window.scrollTo(0, saved.scrollY);
+    }, 50);
+  }
+}
+
+/* -------------------------
+   TTS 기능
+-------------------------*/
+function speakText(text, lang) {
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  utter.rate = Number(document.getElementById("tts-speed").value);
+  speechSynthesis.speak(utter);
+}
+
+/* -------------------------
+   카드 렌더링
+-------------------------*/
+function renderCards() {
+  container.innerHTML = "";
+
+  words.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.state = "0";
+    card.id = "card-" + item.id;
+
+    const header = document.createElement("div");
+    header.className = "card-header";
+    header.textContent = "No. " + item.id;
+    card.appendChild(header);
+
+    /* 영어 */
+    const rowEn = document.createElement("div");
+    rowEn.className = "row";
+
+    const en = document.createElement("div");
+    en.className = "question";
+    en.textContent = item.word;
+    rowEn.appendChild(en);
+
+    const btnEn = document.createElement("button");
+    btnEn.className = "speak-btn";
+    btnEn.textContent = "읽기";
+    btnEn.onclick = (e) => {
+      e.stopPropagation();
+      speakText(item.word, "en-US");
+    };
+    rowEn.appendChild(btnEn);
+
+    card.appendChild(rowEn);
+
+    /* 한국어 */
+    const rowKo = document.createElement("div");
+    rowKo.className = "row";
+
+    const ko = document.createElement("div");
+    ko.className = "meaning-ko";
+    ko.textContent = item.ko;
+    rowKo.appendChild(ko);
+
+    const btnKo = document.createElement("button");
+    btnKo.className = "speak-btn";
+    btnKo.textContent = "읽기";
+    btnKo.onclick = (e) => {
+      e.stopPropagation();
+      speakText(item.ko, "ko-KR");
+    };
+    rowKo.appendChild(btnKo);
+
+    card.appendChild(rowKo);
+
+    /* 아랍어 */
+    const rowAr = document.createElement("div");
+    rowAr.className = "row";
+
+    const ar = document.createElement("div");
+    ar.className = "meaning-arabic";
+    ar.textContent = item.arabic;
+    rowAr.appendChild(ar);
+
+    const btnAr = document.createElement("button");
+    btnAr.className = "speak-btn";
+    btnAr.textContent = "읽기";
+    btnAr.onclick = (e) => {
+      e.stopPropagation();
+      speakText(item.arabic, "ar-SA");
+    };
+    rowAr.appendChild(btnAr);
+
+    card.appendChild(rowAr);
+
+    /* 상태 점 */
+    const dot = document.createElement("div");
+    dot.className = "status-dot";
+    dot.onclick = (e) => {
+      e.stopPropagation();
+      let s = Number(card.dataset.state);
+      s = (s + 1) % 3;
+      card.dataset.state = s;
+
+      if (s === 0) { card.style.background = "white";   dot.style.background = "white";   }
+      if (s === 1) { card.style.background = "#eee";    dot.style.background = "#ccc";    }
+      if (s === 2) { card.style.background = "#fff6a0"; dot.style.background = "#ffe36e"; }
+
+      saveAppState();
+    };
+    card.appendChild(dot);
+
+    /* 개별 숨기기 */
+    en.onclick = () => {
+      en.classList.toggle("hidden");
+      saveAppState();
+    };
+    ko.onclick = () => {
+      ko.classList.toggle("hidden");
+      saveAppState();
+    };
+    ar.onclick = () => {
+      ar.classList.toggle("hidden");
+      saveAppState();
+    };
+
+    container.appendChild(card);
+  });
+
+  // 렌더 후 저장된 상태 적용
+  applySavedState();
+}
+
+renderCards();
+
+/* -------------------------
+   전체 숨기기/보이기 (버튼)
+-------------------------*/
+document.getElementById("toggle-questions").onclick = () => {
+  isQuestionsHidden = !isQuestionsHidden;
+  document.querySelectorAll(".question").forEach(el => {
+    if (isQuestionsHidden) el.classList.add("hidden");
+    else el.classList.remove("hidden");
+  });
+  saveAppState();
+};
+
+document.getElementById("toggle-korean").onclick = () => {
+  isKoreanHidden = !isKoreanHidden;
+  document.querySelectorAll(".meaning-ko").forEach(el => {
+    if (isKoreanHidden) el.classList.add("hidden");
+    else el.classList.remove("hidden");
+  });
+  saveAppState();
+};
+
+document.getElementById("toggle-arabic").onclick = () => {
+  isArabicHidden = !isArabicHidden;
+  document.querySelectorAll(".meaning-arabic").forEach(el => {
+    if (isArabicHidden) el.classList.add("hidden");
+    else el.classList.remove("hidden");
+  });
+  saveAppState();
+};
+
+/* -------------------------
+   번호로 카드 이동
+-------------------------*/
+document.getElementById("jump-btn").onclick = () => {
+  const input = document.getElementById("jump-id-input");
+  const raw = (input.value || "").trim();
+  if (!raw) return;
+
+  const num = Number(raw);
+  if (Number.isNaN(num)) {
+    alert("숫자를 입력해 주세요.");
+    return;
+  }
+
+  const target = document.getElementById("card-" + num);
+  if (!target) {
+    alert("해당 번호의 카드가 없습니다.");
+    return;
+  }
+
+  target.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  target.style.outline = "6px solid #ff9800";
+  setTimeout(() => {
+    target.style.outline = "";
+  }, 1500);
+
+  // 이동 후 위치도 저장
+  saveScrollPositionOnly();
+};
+
+document.getElementById("jump-id-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    document.getElementById("jump-btn").click();
+  }
+});
+
+/* -------------------------
+   사용방법 팝업 토글
+-------------------------*/
+const helpPanel = document.getElementById("help-panel");
+const helpClose = document.getElementById("help-close");
+
+document.getElementById("toggle-help").onclick = () => {
+  helpPanel.style.display = "flex";
+};
+
+helpClose.onclick = () => {
+  helpPanel.style.display = "none";
+};
+
+helpPanel.addEventListener("click", (e) => {
+  if (e.target === helpPanel) {
+    helpPanel.style.display = "none";
+  }
+});
+
+/* -------------------------
+   헤더 간소화 버튼
+-------------------------*/
+const headerSticky = document.getElementById("header-sticky");
+const compactBtn = document.getElementById("compact-toggle");
+let isCompact = false;
+
+compactBtn.onclick = () => {
+  isCompact = !isCompact;
+  if (isCompact) {
+    headerSticky.classList.add("compact");
+    compactBtn.textContent = "+";
+  } else {
+    headerSticky.classList.remove("compact");
+    compactBtn.textContent = "−";
+  }
+};
+
+/* -------------------------
+   스크롤 이벤트로 위치 저장 (디바운스)
+-------------------------*/
+window.addEventListener("scroll", () => {
+  if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
+  scrollSaveTimer = setTimeout(() => {
+    saveScrollPositionOnly();
+  }, 200);
+});
+</script>
+
+</body>
+</html>
