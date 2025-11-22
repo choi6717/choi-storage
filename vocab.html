@@ -41,12 +41,10 @@
       margin-bottom: 20px;
     }
 
-    /* 헤더 안 내용 전체 (간소화 시 여기만 숨김) */
     #header-content {
       width: 100%;
     }
 
-    /* 간소화 토글 버튼 (작은 아이콘) */
     .compact-toggle-btn {
       position: absolute;
       top: 10px;
@@ -69,7 +67,6 @@
       background: #eee;
     }
 
-    /* 간소화 상태일 때: 본문 헤더 숨기고 아이콘만 보이게 */
     .header-sticky.compact #header-content {
       display: none;
     }
@@ -119,7 +116,6 @@
       border-radius: 15px;
     }
 
-    /* 번호 이동 입력창 */
     #jump-id-input {
       font-size: 40px;
       padding: 12px 18px;
@@ -129,7 +125,6 @@
       box-sizing: border-box;
     }
 
-    /* 🔹 사용방법 팝업 오버레이 */
     #help-panel {
       display: none;
       position: fixed;
@@ -175,7 +170,7 @@
       background: white;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justifyContent: center;
       cursor: pointer;
     }
 
@@ -195,7 +190,6 @@
       margin-top: 4px;
     }
 
-    /* 🔹 모바일(가로 600px 이하)에서 헤더 글자 크기 줄이기 */
     @media (max-width: 600px) {
       body {
         font-size: 32px;
@@ -245,7 +239,6 @@
       }
     }
 
-    /* 🔹 단어카드: 항상 2열 */
     #cards-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -295,7 +288,6 @@
       opacity: 0;
     }
 
-    /* 상태 표시 점 */
     .status-dot {
       position: absolute;
       top: 18px;
@@ -308,7 +300,6 @@
       cursor: pointer;
     }
 
-    /* 읽기 버튼 */
     .speak-btn {
       font-size: 38px;
       padding: 12px 20px;
@@ -328,7 +319,6 @@
 
 <body>
 
-<!-- 🔹 sticky 헤더 + 간소화 아이콘 -->
 <div class="header-sticky" id="header-sticky">
   <button id="compact-toggle" class="compact-toggle-btn" title="열기/닫기">
     −
@@ -357,14 +347,13 @@
         </button>
       </div>
 
-      <!-- 2줄: 사용방법 + 메인페이지 돌아가기 -->
+      <!-- 2줄: 사용방법 + 메인페이지 -->
       <div class="row-controls">
         <button class="help-btn" id="toggle-help">
           사용방법
           <span class="btn-ar">طريقة الاستخدام</span>
         </button>
 
-        <!-- 🔹 메인페이지 돌아가기 버튼 -->
         <button id="go-index-btn">
           메인페이지 돌아가기
           <span class="btn-ar">العودة إلى الصفحة الرئيسية</span>
@@ -404,7 +393,6 @@
   </div>
 </div>
 
-<!-- 🔹 사용방법 팝업(모달) -->
 <div id="help-panel">
   <div class="help-box">
     <div class="help-box-header">
@@ -544,13 +532,7 @@ const words = [
 
 const container = document.getElementById("cards-container");
 
-/* ---- 전역 플래그 ---- */
-let isQuestionsHidden = false;
-let isKoreanHidden   = false;
-let isArabicHidden   = false;
-let isCompact        = false;
-
-/* ---- 카드별 상태 ----
+/* ---- 상태 저장용 ----
    cardState[id] = {
      state: 0|1|2,
      showQuestion: true/false,
@@ -559,14 +541,17 @@ let isCompact        = false;
    }
 */
 let cardState = {};
+let isCompact = false;
 
-/* ---- localStorage 키 ---- */
-const STORAGE_KEY = "vocab_app_state_v3";
+/* 전체 토글용 헤더 상태(일괄 숨김 여부 기억용, 렌더에는 직접 영향 X) */
+let headerQuestionsHidden = false;
+let headerKoreanHidden   = false;
+let headerArabicHidden   = false;
+
+const STORAGE_KEY = "vocab_app_state_v4";
 let initialScrollY = 0;
 
-/* -------------------------
-   상태 저장/로드 함수
--------------------------*/
+/* ------------------------- 상태 로드 ------------------------- */
 function loadAppStateRaw() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -578,52 +563,26 @@ function loadAppStateRaw() {
   }
 }
 
-function saveAppState() {
-  try {
-    const data = {
-      global: {
-        isQuestionsHidden,
-        isKoreanHidden,
-        isArabicHidden,
-        isCompact,
-        ttsSpeed: document.getElementById("tts-speed").value
-      },
-      cards: cardState,
-      scrollY: window.scrollY || 0
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error("상태 저장 실패:", e);
-  }
-}
-
-/* 스크롤만 저장 */
-let scrollSaveTimer = null;
-function saveScrollPositionOnly() {
-  try {
-    const raw = loadAppStateRaw();
-    const data = raw || { global:{}, cards:{}, scrollY:0 };
-    data.scrollY = window.scrollY || 0;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error("스크롤 위치 저장 실패:", e);
-  }
-}
-
-/* 초기 상태 로드 (메모리 변수 세팅) */
 (function initFromStorage() {
   const saved = loadAppStateRaw();
   if (!saved) return;
 
   if (saved.global) {
-    isQuestionsHidden = !!saved.global.isQuestionsHidden;
-    isKoreanHidden    = !!saved.global.isKoreanHidden;
-    isArabicHidden    = !!saved.global.isArabicHidden;
-    isCompact         = !!saved.global.isCompact;
-
+    isCompact = !!saved.global.isCompact;
     const ttsSpeed = saved.global.ttsSpeed;
     if (ttsSpeed && document.getElementById("tts-speed")) {
       document.getElementById("tts-speed").value = ttsSpeed;
+    }
+
+    // v3에서 쓰던 헤더 상태가 있으면 참고만 함(없어도 OK)
+    if (typeof saved.global.headerQuestionsHidden === "boolean") {
+      headerQuestionsHidden = saved.global.headerQuestionsHidden;
+    }
+    if (typeof saved.global.headerKoreanHidden === "boolean") {
+      headerKoreanHidden = saved.global.headerKoreanHidden;
+    }
+    if (typeof saved.global.headerArabicHidden === "boolean") {
+      headerArabicHidden = saved.global.headerArabicHidden;
     }
   }
 
@@ -636,7 +595,39 @@ function saveScrollPositionOnly() {
   }
 })();
 
-/* 카드 상태 객체 꺼내기 (없으면 생성) */
+/* ------------------------- 상태 저장 ------------------------- */
+function saveAppState() {
+  try {
+    const data = {
+      global: {
+        isCompact,
+        ttsSpeed: document.getElementById("tts-speed").value,
+        headerQuestionsHidden,
+        headerKoreanHidden,
+        headerArabicHidden
+      },
+      cards: cardState,
+      scrollY: window.scrollY || 0
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("상태 저장 실패:", e);
+  }
+}
+
+let scrollSaveTimer = null;
+function saveScrollPositionOnly() {
+  try {
+    const raw = loadAppStateRaw();
+    const data = raw || { global:{}, cards:{}, scrollY:0 };
+    data.scrollY = window.scrollY || 0;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("스크롤 위치 저장 실패:", e);
+  }
+}
+
+/* ------------------------- 유틸 ------------------------- */
 function getCardState(id) {
   if (!cardState[id]) {
     cardState[id] = {};
@@ -644,9 +635,6 @@ function getCardState(id) {
   return cardState[id];
 }
 
-/* -------------------------
-   TTS 기능
--------------------------*/
 function speakText(text, lang) {
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = lang;
@@ -654,7 +642,6 @@ function speakText(text, lang) {
   speechSynthesis.speak(utter);
 }
 
-/* 카드 배경/점 색 업데이트 */
 function updateCardColor(card, stateValue) {
   const dot = card.querySelector(".status-dot");
   if (!dot) return;
@@ -671,8 +658,8 @@ function updateCardColor(card, stateValue) {
   }
 }
 
-/* 전역 숨김 플래그 + 카드별 상태 화면에 적용 */
-function applyGlobalFlags() {
+/* 개별/전체 상태를 화면에 반영 */
+function applyVisibilityFromState() {
   document.querySelectorAll(".card").forEach(card => {
     const id = card.id.replace("card-", "");
     const st = getCardState(id);
@@ -681,39 +668,22 @@ function applyGlobalFlags() {
     const ko = card.querySelector(".meaning-ko");
     const ar = card.querySelector(".meaning-arabic");
 
-    const showQ  = st.showQuestion !== false;
+    const showQ  = st.showQuestion !== false; // 기본 true
     const showKo = st.showKo !== false;
     const showAr = st.showAr !== false;
 
-    // 영어
-    if (isQuestionsHidden) {
-      q.classList.add("hidden");
-    } else {
-      if (showQ) q.classList.remove("hidden");
-      else       q.classList.add("hidden");
-    }
+    if (showQ) q.classList.remove("hidden");
+    else       q.classList.add("hidden");
 
-    // 한글
-    if (isKoreanHidden) {
-      ko.classList.add("hidden");
-    } else {
-      if (showKo) ko.classList.remove("hidden");
-      else        ko.classList.add("hidden");
-    }
+    if (showKo) ko.classList.remove("hidden");
+    else        ko.classList.add("hidden");
 
-    // 아랍어
-    if (isArabicHidden) {
-      ar.classList.add("hidden");
-    } else {
-      if (showAr) ar.classList.remove("hidden");
-      else        ar.classList.add("hidden");
-    }
+    if (showAr) ar.classList.remove("hidden");
+    else        ar.classList.add("hidden");
   });
 }
 
-/* -------------------------
-   카드 렌더링
--------------------------*/
+/* ------------------------- 카드 렌더링 ------------------------- */
 function renderCards() {
   container.innerHTML = "";
 
@@ -732,7 +702,7 @@ function renderCards() {
     header.textContent = "No. " + item.id;
     card.appendChild(header);
 
-    /* 영어 */
+    /* 영어 줄 */
     const rowEn = document.createElement("div");
     rowEn.className = "row";
 
@@ -749,10 +719,9 @@ function renderCards() {
       speakText(item.word, "en-US");
     };
     rowEn.appendChild(btnEn);
-
     card.appendChild(rowEn);
 
-    /* 한국어 */
+    /* 한국어 줄 */
     const rowKo = document.createElement("div");
     rowKo.className = "row";
 
@@ -769,10 +738,9 @@ function renderCards() {
       speakText(item.ko, "ko-KR");
     };
     rowKo.appendChild(btnKo);
-
     card.appendChild(rowKo);
 
-    /* 아랍어 */
+    /* 아랍어 줄 */
     const rowAr = document.createElement("div");
     rowAr.className = "row";
 
@@ -789,7 +757,6 @@ function renderCards() {
       speakText(item.arabic, "ar-SA");
     };
     rowAr.appendChild(btnAr);
-
     card.appendChild(rowAr);
 
     /* 상태 점 */
@@ -807,13 +774,13 @@ function renderCards() {
     };
     card.appendChild(dot);
 
-    /* 개별 숨기기 토글 */
+    /* 개별 숨기기 토글 (전역 플래그 없음, 카드 상태만 변경) */
     en.onclick = () => {
       const st = getCardState(idStr);
       const cur = st.showQuestion !== false;
       st.showQuestion = !cur;
       saveAppState();
-      applyGlobalFlags();
+      applyVisibilityFromState();
     };
 
     ko.onclick = () => {
@@ -821,7 +788,7 @@ function renderCards() {
       const cur = st.showKo !== false;
       st.showKo = !cur;
       saveAppState();
-      applyGlobalFlags();
+      applyVisibilityFromState();
     };
 
     ar.onclick = () => {
@@ -829,19 +796,16 @@ function renderCards() {
       const cur = st.showAr !== false;
       st.showAr = !cur;
       saveAppState();
-      applyGlobalFlags();
+      applyVisibilityFromState();
     };
 
-    // 색상 적용
     updateCardColor(card, stateVal);
-
     container.appendChild(card);
   });
 
-  // 전체 숨김/표시 상태 적용
-  applyGlobalFlags();
+  // 저장된 상태에 따른 줄 숨김/표시
+  applyVisibilityFromState();
 
-  // 스크롤 복원
   if (initialScrollY > 0) {
     setTimeout(() => {
       window.scrollTo(0, initialScrollY);
@@ -851,30 +815,53 @@ function renderCards() {
 
 renderCards();
 
-/* -------------------------
-   헤더 글로벌 버튼들
--------------------------*/
+/* ------------------------- 헤더 전체 토글 ------------------------- */
+// "영어" 버튼: 모든 카드 영어줄 숨김/표시 일괄 변경
 document.getElementById("toggle-questions").onclick = () => {
-  isQuestionsHidden = !isQuestionsHidden;
-  applyGlobalFlags();
+  headerQuestionsHidden = !headerQuestionsHidden;
+  const hide = headerQuestionsHidden;
+
+  words.forEach(item => {
+    const idStr = String(item.id);
+    const st = getCardState(idStr);
+    st.showQuestion = !hide;
+  });
+
   saveAppState();
+  applyVisibilityFromState();
 };
 
+// "한글" 버튼
 document.getElementById("toggle-korean").onclick = () => {
-  isKoreanHidden = !isKoreanHidden;
-  applyGlobalFlags();
+  headerKoreanHidden = !headerKoreanHidden;
+  const hide = headerKoreanHidden;
+
+  words.forEach(item => {
+    const idStr = String(item.id);
+    const st = getCardState(idStr);
+    st.showKo = !hide;
+  });
+
   saveAppState();
+  applyVisibilityFromState();
 };
 
+// "아랍어" 버튼
 document.getElementById("toggle-arabic").onclick = () => {
-  isArabicHidden = !isArabicHidden;
-  applyGlobalFlags();
+  headerArabicHidden = !headerArabicHidden;
+  const hide = headerArabicHidden;
+
+  words.forEach(item => {
+    const idStr = String(item.id);
+    const st = getCardState(idStr);
+    st.showAr = !hide;
+  });
+
   saveAppState();
+  applyVisibilityFromState();
 };
 
-/* -------------------------
-   번호로 카드 이동
--------------------------*/
+/* ------------------------- 번호로 카드 이동 ------------------------- */
 document.getElementById("jump-btn").onclick = () => {
   const input = document.getElementById("jump-id-input");
   const raw = (input.value || "").trim();
@@ -911,9 +898,7 @@ document.getElementById("jump-id-input").addEventListener("keydown", (e) => {
   }
 });
 
-/* -------------------------
-   사용방법 팝업 토글
--------------------------*/
+/* ------------------------- 사용방법 팝업 ------------------------- */
 const helpPanel = document.getElementById("help-panel");
 const helpClose = document.getElementById("help-close");
 
@@ -931,17 +916,12 @@ helpPanel.addEventListener("click", (e) => {
   }
 });
 
-/* -------------------------
-   메인페이지 돌아가기 버튼
--------------------------*/
+/* ------------------------- 메인페이지 버튼 ------------------------- */
 document.getElementById("go-index-btn").onclick = () => {
-  // 같은 폴더에 있는 index.html로 이동
   window.location.href = "index.html";
 };
 
-/* -------------------------
-   헤더 간소화 버튼
--------------------------*/
+/* ------------------------- 헤더 간소화 ------------------------- */
 const headerSticky = document.getElementById("header-sticky");
 const compactBtn = document.getElementById("compact-toggle");
 
@@ -965,9 +945,7 @@ compactBtn.onclick = () => {
   saveAppState();
 };
 
-/* -------------------------
-   스크롤 이벤트로 위치 저장 (디바운스)
--------------------------*/
+/* ------------------------- 스크롤 저장 ------------------------- */
 window.addEventListener("scroll", () => {
   if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
   scrollSaveTimer = setTimeout(() => {
@@ -975,9 +953,7 @@ window.addEventListener("scroll", () => {
   }, 200);
 });
 
-/* -------------------------
-   페이지 떠나기 직전에 한 번 더 저장
--------------------------*/
+/* ------------------------- 나가기 전 저장 ------------------------- */
 window.addEventListener("beforeunload", () => {
   saveAppState();
 });
