@@ -341,6 +341,7 @@
     </h1>
 
     <div class="controls">
+      <!-- 1줄: 영어/한글/아랍어 전체 토글 -->
       <div class="row-controls">
         <button id="toggle-questions">
           영어
@@ -356,13 +357,21 @@
         </button>
       </div>
 
+      <!-- 2줄: 사용방법 + 메인페이지 돌아가기 -->
       <div class="row-controls">
         <button class="help-btn" id="toggle-help">
           사용방법
           <span class="btn-ar">طريقة الاستخدام</span>
         </button>
+
+        <!-- 🔹 메인페이지 돌아가기 버튼 -->
+        <button id="go-index-btn">
+          메인페이지 돌아가기
+          <span class="btn-ar">العودة إلى الصفحة الرئيسية</span>
+        </button>
       </div>
 
+      <!-- 3줄: 속도 -->
       <div class="row-controls">
         <span>
           속도
@@ -377,6 +386,7 @@
         </select>
       </div>
 
+      <!-- 4줄: 번호 이동 -->
       <div class="row-controls">
         <span>
           번호 이동
@@ -534,19 +544,30 @@ const words = [
 
 const container = document.getElementById("cards-container");
 
-/* ---- 전체 숨김 상태 플래그 (헤더 버튼용) ---- */
+/* ---- 전역 플래그 ---- */
 let isQuestionsHidden = false;
 let isKoreanHidden   = false;
 let isArabicHidden   = false;
 let isCompact        = false;
 
-/* ---- localStorage 키 (v2로 변경) ---- */
-const STORAGE_KEY = "vocab_app_state_v2";
+/* ---- 카드별 상태 ----
+   cardState[id] = {
+     state: 0|1|2,
+     showQuestion: true/false,
+     showKo: true/false,
+     showAr: true/false
+   }
+*/
+let cardState = {};
+
+/* ---- localStorage 키 ---- */
+const STORAGE_KEY = "vocab_app_state_v3";
+let initialScrollY = 0;
 
 /* -------------------------
    상태 저장/로드 함수
 -------------------------*/
-function loadAppState() {
+function loadAppStateRaw() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -567,37 +588,21 @@ function saveAppState() {
         isCompact,
         ttsSpeed: document.getElementById("tts-speed").value
       },
-      cards: {},
+      cards: cardState,
       scrollY: window.scrollY || 0
     };
-
-    document.querySelectorAll(".card").forEach(card => {
-      const id = card.id.replace("card-", "");
-      const q  = card.querySelector(".question");
-      const ko = card.querySelector(".meaning-ko");
-      const ar = card.querySelector(".meaning-arabic");
-      const state = Number(card.dataset.state) || 0;
-
-      data.cards[id] = {
-        state,
-        showQuestion: !q.classList.contains("hidden"),
-        showKo: !ko.classList.contains("hidden"),
-        showAr: !ar.classList.contains("hidden")
-      };
-    });
-
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.error("상태 저장 실패:", e);
   }
 }
 
-/* 스크롤 위치만 따로 가볍게 저장 (기존 카드 상태 유지) */
+/* 스크롤만 저장 */
 let scrollSaveTimer = null;
 function saveScrollPositionOnly() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    let data = raw ? JSON.parse(raw) : { global:{}, cards:{}, scrollY:0 };
+    const raw = loadAppStateRaw();
+    const data = raw || { global:{}, cards:{}, scrollY:0 };
     data.scrollY = window.scrollY || 0;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
@@ -605,11 +610,11 @@ function saveScrollPositionOnly() {
   }
 }
 
-function applySavedState() {
-  const saved = loadAppState();
+/* 초기 상태 로드 (메모리 변수 세팅) */
+(function initFromStorage() {
+  const saved = loadAppStateRaw();
   if (!saved) return;
 
-  // 전역 플래그 / TTS / 헤더 접힘 복원
   if (saved.global) {
     isQuestionsHidden = !!saved.global.isQuestionsHidden;
     isKoreanHidden    = !!saved.global.isKoreanHidden;
@@ -620,76 +625,23 @@ function applySavedState() {
     if (ttsSpeed && document.getElementById("tts-speed")) {
       document.getElementById("tts-speed").value = ttsSpeed;
     }
-
-    const headerSticky = document.getElementById("header-sticky");
-    const compactBtn = document.getElementById("compact-toggle");
-    if (isCompact) {
-      headerSticky.classList.add("compact");
-      compactBtn.textContent = "+";
-    } else {
-      headerSticky.classList.remove("compact");
-      compactBtn.textContent = "−";
-    }
   }
 
-  const cardsState = saved.cards || {};
-
-  document.querySelectorAll(".card").forEach(card => {
-    const id = card.id.replace("card-", "");
-    const stateInfo = cardsState[id];
-    const q   = card.querySelector(".question");
-    const ko  = card.querySelector(".meaning-ko");
-    const ar  = card.querySelector(".meaning-arabic");
-    const dot = card.querySelector(".status-dot");
-
-    // 상태 점(배경색) 복원
-    let s = 0;
-    if (stateInfo && typeof stateInfo.state === "number") {
-      s = stateInfo.state;
-    }
-    card.dataset.state = s;
-
-    if (s === 0) {
-      card.style.background = "white";
-      dot.style.background = "white";
-    } else if (s === 1) {
-      card.style.background = "#eee";
-      dot.style.background = "#ccc";
-    } else if (s === 2) {
-      card.style.background = "#fff6a0";
-      dot.style.background = "#ffe36e";
-    }
-
-    // 각 줄 숨김 상태 복원
-    if (stateInfo) {
-      if (stateInfo.showQuestion === false) q.classList.add("hidden");
-      else q.classList.remove("hidden");
-
-      if (stateInfo.showKo === false) ko.classList.add("hidden");
-      else ko.classList.remove("hidden");
-
-      if (stateInfo.showAr === false) ar.classList.add("hidden");
-      else ar.classList.remove("hidden");
-    }
-  });
-
-  // 전역 숨김 플래그에 맞춰 한 번 더 정리
-  if (isQuestionsHidden) {
-    document.querySelectorAll(".question").forEach(el => el.classList.add("hidden"));
-  }
-  if (isKoreanHidden) {
-    document.querySelectorAll(".meaning-ko").forEach(el => el.classList.add("hidden"));
-  }
-  if (isArabicHidden) {
-    document.querySelectorAll(".meaning-arabic").forEach(el => el.classList.add("hidden"));
+  if (saved.cards) {
+    cardState = saved.cards;
   }
 
-  // 스크롤 위치 복원
-  if (typeof saved.scrollY === "number" && saved.scrollY > 0) {
-    setTimeout(() => {
-      window.scrollTo(0, saved.scrollY);
-    }, 50);
+  if (typeof saved.scrollY === "number") {
+    initialScrollY = saved.scrollY;
   }
+})();
+
+/* 카드 상태 객체 꺼내기 (없으면 생성) */
+function getCardState(id) {
+  if (!cardState[id]) {
+    cardState[id] = {};
+  }
+  return cardState[id];
 }
 
 /* -------------------------
@@ -702,6 +654,63 @@ function speakText(text, lang) {
   speechSynthesis.speak(utter);
 }
 
+/* 카드 배경/점 색 업데이트 */
+function updateCardColor(card, stateValue) {
+  const dot = card.querySelector(".status-dot");
+  if (!dot) return;
+
+  if (stateValue === 0 || stateValue === undefined) {
+    card.style.background = "white";
+    dot.style.background = "white";
+  } else if (stateValue === 1) {
+    card.style.background = "#eee";
+    dot.style.background = "#ccc";
+  } else if (stateValue === 2) {
+    card.style.background = "#fff6a0";
+    dot.style.background = "#ffe36e";
+  }
+}
+
+/* 전역 숨김 플래그 + 카드별 상태 화면에 적용 */
+function applyGlobalFlags() {
+  document.querySelectorAll(".card").forEach(card => {
+    const id = card.id.replace("card-", "");
+    const st = getCardState(id);
+
+    const q  = card.querySelector(".question");
+    const ko = card.querySelector(".meaning-ko");
+    const ar = card.querySelector(".meaning-arabic");
+
+    const showQ  = st.showQuestion !== false;
+    const showKo = st.showKo !== false;
+    const showAr = st.showAr !== false;
+
+    // 영어
+    if (isQuestionsHidden) {
+      q.classList.add("hidden");
+    } else {
+      if (showQ) q.classList.remove("hidden");
+      else       q.classList.add("hidden");
+    }
+
+    // 한글
+    if (isKoreanHidden) {
+      ko.classList.add("hidden");
+    } else {
+      if (showKo) ko.classList.remove("hidden");
+      else        ko.classList.add("hidden");
+    }
+
+    // 아랍어
+    if (isArabicHidden) {
+      ar.classList.add("hidden");
+    } else {
+      if (showAr) ar.classList.remove("hidden");
+      else        ar.classList.add("hidden");
+    }
+  });
+}
+
 /* -------------------------
    카드 렌더링
 -------------------------*/
@@ -709,10 +718,14 @@ function renderCards() {
   container.innerHTML = "";
 
   words.forEach(item => {
+    const idStr = String(item.id);
+    const st = getCardState(idStr);
+
     const card = document.createElement("div");
     card.className = "card";
-    card.dataset.state = "0";
-    card.id = "card-" + item.id;
+    const stateVal = typeof st.state === "number" ? st.state : 0;
+    card.dataset.state = stateVal;
+    card.id = "card-" + idStr;
 
     const header = document.createElement("div");
     header.className = "card-header";
@@ -784,68 +797,78 @@ function renderCards() {
     dot.className = "status-dot";
     dot.onclick = (e) => {
       e.stopPropagation();
-      let s = Number(card.dataset.state);
-      s = (s + 1) % 3;
-      card.dataset.state = s;
-
-      if (s === 0) { card.style.background = "white";   dot.style.background = "white";   }
-      if (s === 1) { card.style.background = "#eee";    dot.style.background = "#ccc";    }
-      if (s === 2) { card.style.background = "#fff6a0"; dot.style.background = "#ffe36e"; }
-
+      const st = getCardState(idStr);
+      const current = typeof st.state === "number" ? st.state : 0;
+      const next = (current + 1) % 3;
+      st.state = next;
+      card.dataset.state = next;
+      updateCardColor(card, next);
       saveAppState();
     };
     card.appendChild(dot);
 
-    /* 개별 숨기기 */
+    /* 개별 숨기기 토글 */
     en.onclick = () => {
-      en.classList.toggle("hidden");
+      const st = getCardState(idStr);
+      const cur = st.showQuestion !== false;
+      st.showQuestion = !cur;
       saveAppState();
+      applyGlobalFlags();
     };
+
     ko.onclick = () => {
-      ko.classList.toggle("hidden");
+      const st = getCardState(idStr);
+      const cur = st.showKo !== false;
+      st.showKo = !cur;
       saveAppState();
+      applyGlobalFlags();
     };
+
     ar.onclick = () => {
-      ar.classList.toggle("hidden");
+      const st = getCardState(idStr);
+      const cur = st.showAr !== false;
+      st.showAr = !cur;
       saveAppState();
+      applyGlobalFlags();
     };
+
+    // 색상 적용
+    updateCardColor(card, stateVal);
 
     container.appendChild(card);
   });
 
-  // 렌더 후 저장된 상태 적용
-  applySavedState();
+  // 전체 숨김/표시 상태 적용
+  applyGlobalFlags();
+
+  // 스크롤 복원
+  if (initialScrollY > 0) {
+    setTimeout(() => {
+      window.scrollTo(0, initialScrollY);
+    }, 50);
+  }
 }
 
 renderCards();
 
 /* -------------------------
-   전체 숨기기/보이기 (버튼)
+   헤더 글로벌 버튼들
 -------------------------*/
 document.getElementById("toggle-questions").onclick = () => {
   isQuestionsHidden = !isQuestionsHidden;
-  document.querySelectorAll(".question").forEach(el => {
-    if (isQuestionsHidden) el.classList.add("hidden");
-    else el.classList.remove("hidden");
-  });
+  applyGlobalFlags();
   saveAppState();
 };
 
 document.getElementById("toggle-korean").onclick = () => {
   isKoreanHidden = !isKoreanHidden;
-  document.querySelectorAll(".meaning-ko").forEach(el => {
-    if (isKoreanHidden) el.classList.add("hidden");
-    else el.classList.remove("hidden");
-  });
+  applyGlobalFlags();
   saveAppState();
 };
 
 document.getElementById("toggle-arabic").onclick = () => {
   isArabicHidden = !isArabicHidden;
-  document.querySelectorAll(".meaning-arabic").forEach(el => {
-    if (isArabicHidden) el.classList.add("hidden");
-    else el.classList.remove("hidden");
-  });
+  applyGlobalFlags();
   saveAppState();
 };
 
@@ -909,10 +932,26 @@ helpPanel.addEventListener("click", (e) => {
 });
 
 /* -------------------------
+   메인페이지 돌아가기 버튼
+-------------------------*/
+document.getElementById("go-index-btn").onclick = () => {
+  // 같은 폴더에 있는 index.html로 이동
+  window.location.href = "index.html";
+};
+
+/* -------------------------
    헤더 간소화 버튼
 -------------------------*/
 const headerSticky = document.getElementById("header-sticky");
 const compactBtn = document.getElementById("compact-toggle");
+
+if (isCompact) {
+  headerSticky.classList.add("compact");
+  compactBtn.textContent = "+";
+} else {
+  headerSticky.classList.remove("compact");
+  compactBtn.textContent = "−";
+}
 
 compactBtn.onclick = () => {
   isCompact = !isCompact;
